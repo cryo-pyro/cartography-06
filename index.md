@@ -1502,4 +1502,128 @@ If that feels heavy, draft a **one-page grid manifesto**: "The Ukhona Grid: 60+ 
 Which direction now? Grid protocol, manifesto, or dive deeper into a node (e.g., SGD-theology formalization)?
 
 ## III
-Coming Soon.
+**#07 — Ukhona Pilot: Uganda Condition Heatmap (Choropleth) Flask App v0.1**
+
+Yes—quick, executable deliverable for tomorrow. We'll start with a **choropleth map** (the standard "heatmap" style for geographic areas like districts/regions: colors represent intensity per polygon) of Uganda, using real boundaries and demo data for one condition.
+
+**Chosen initial condition:** HIV Prevalence among adults (15-49/15+).  
+- Why? It's a major public health issue in Uganda with available stats (national ~5.1-5.8%, regional variation from 2.3% in West Nile to 8.3% in South Buganda per 2022/2023 factsheets).  
+- Data limitation: Public sources give regional/sub-regional, not granular district-level in easy CSV. For demo, I've used sample values based on reported ranges (higher in central/Kampala areas, lower in north/west).  
+- Theme & variations plan: Replace the `data_dict` with other conditions (e.g., malaria parasitemia, fibromyalgia proxies, poverty index, variance metrics from your framework) over time. Change title, color scale (`YlOrRd` → `BuPu`, etc.), legend, tooltips. Bach-style: same structure, infinite elaborations.
+
+### Quick Setup (Run Locally for Tomorrow)
+1. Install deps (in terminal):
+   ```
+   pip install flask folium pandas
+   ```
+2. Save this as `app.py`:
+   ```python
+   from flask import Flask, render_template_string
+   import folium
+   import pandas as pd
+
+   app = Flask(__name__)
+
+   @app.route('/')
+   def uganda_heatmap():
+       # Uganda districts (ADM2) GeoJSON - simplified for faster load
+       geojson_url = "https://github.com/wmgeolab/geoBoundaries/raw/9469f09/releaseData/gbOpen/UGA/ADM2/geoBoundaries-UGA-ADM2_simplified.geojson"
+
+       # Demo data: district → HIV prevalence % (approximate/sample based on regional reports)
+       # Real data must match 'shapeName' exactly (case-sensitive) from the GeoJSON.
+       # For full coverage, add all ~135 districts; unmatched stay uncolored.
+       data_dict = {
+           "Kampala": 6.9,
+           "Wakiso": 7.5,
+           "Mukono": 6.0,
+           "Mpigi": 6.5,
+           "Mityana": 6.2,
+           "Gulu": 8.0,       # Mid North higher
+           "Lira": 7.2,
+           "Arua": 3.0,        # West Nile lower
+           "Mbarara": 5.5,     # South Western
+           "Jinja": 4.5,       # East Central
+           "Mbale": 3.5,
+           # Add more here as you source district-level data (DHS clusters, MoH reports, etc.)
+       }
+
+       df = pd.DataFrame(list(data_dict.items()), columns=['District', 'Prevalence'])
+
+       # Base map centered on Uganda
+       m = folium.Map(location=[1.3733, 32.2903], zoom_start=6, tiles='cartodbpositron')
+
+       # Choropleth layer
+       folium.Choropleth(
+           geo_data=geojson_url,
+           data=df,
+           columns=['District', 'Prevalence'],
+           key_on='feature.properties.shapeName',  # District name field in this GeoJSON
+           fill_color='YlOrRd',                    # Yellow-orange-red for prevalence
+           fill_opacity=0.7,
+           line_opacity=0.3,
+           legend_name='HIV Prevalence (%) — Demo (Regional Approximation)',
+           highlight=True,
+           tooltip=folium.GeoJsonTooltip(fields=['shapeName'], aliases=['District:'])
+       ).add_to(m)
+
+       # Add layer control (optional fullscreen, etc.)
+       folium.LayerControl().add_to(m)
+
+       # Get HTML
+       map_html = m._repr_html_()
+
+       # Simple page
+       html = f"""
+       <!DOCTYPE html>
+       <html lang="en">
+       <head>
+           <meta charset="UTF-8">
+           <title>Ukhona: Uganda Condition Heatmap</title>
+           <style>
+               body {{ font-family: Arial, sans-serif; margin: 20px; }}
+               h1 {{ color: #333; }}
+           </style>
+       </head>
+       <body>
+           <h1>Ukhona Pilot: Uganda Heatmap — {data_dict.get('Kampala', 'N/A')}% in Kampala (Demo)</h1>
+           <p>Initial theme: HIV Prevalence (regional proxies). Variations: swap data_dict for malaria, chronic pain proxies, entropy metrics, etc. Add MathJax if needed for equations.</p>
+           <p>Scan QR or open on phone. Fullscreen map below.</p>
+           {map_html}
+       </body>
+       </html>
+       """
+
+       return render_template_string(html)
+
+   if __name__ == '__main__':
+       app.run(debug=True, host='0.0.0.0', port=5000)
+   ```
+
+3. Run: `python app.py`  
+   → Open http://127.0.0.1:5000 (or your local IP for phone access).
+
+### For Public QR Tomorrow (Quick Options)
+- **Local + ngrok (fastest, free)**:
+  1. Install ngrok: `pip install pyngrok` or download from ngrok.com.
+  2. Run: `ngrok http 5000`
+  3. Copy the https://xxxx.ngrok.io URL.
+  4. Generate QR: go to https://www.qr-code-generator.com, paste URL, download QR PNG.
+  5. Show QR on your screen/slide — audience scans to view interactive map.
+- **Deploy for permanence (if time)**:
+  - Push code to GitHub repo.
+  - Deploy free on Render.com (new web service → Python → connect GitHub → set start command `gunicorn app:app` or `python app.py`).
+  - Get stable URL → QR it.
+- **Alternative**: If no time, screenshot the map and QR the image link (but interactive is better).
+
+### Variations Roadmap (Bach-Style for 50 Years)
+- **v0.2**: Add dropdown to select condition (load different data_dict via query param `?condition=malaria`).
+- **v0.3**: Integrate real district CSV (e.g., from UBOS, MoH, DHS) — use `pd.read_csv` instead of dict.
+- **v0.4**: Overlay your ontology (e.g., color by "high variance basins", entropy gradients, returner density proxies).
+- **v0.5**: Add tooltips with trails (links to repos/nodes), MathJax equations for pentadic calculus.
+- **v0.6+**: Mycelium mode — user-submitted data, forks per condition.
+
+This is executable now, minimal, and extensible. Matches your "Pheromones Only" — ship the URL/repo.  
+
+If you want tweaks (e.g., switch to regional ADM1 map with exact factsheet data, add points for cases, change condition to malaria proxy, include QR generation in code), just say. Or need help deploying?  
+
+What do you want next—refine this, or pivot to another node from the grid?
